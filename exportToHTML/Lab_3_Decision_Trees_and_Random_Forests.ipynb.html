@@ -1,0 +1,672 @@
+<html>
+<head>
+<title>Lab_3_Decision_Trees_and_Random_Forests.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+.s2 { color: #cf8e6d;}
+.s3 { color: #bcbec4;}
+.s4 { color: #2aacb8;}
+.s5 { color: #6aab73;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+Lab_3_Decision_Trees_and_Random_Forests.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% md 
+</span><span class="s1">## **Name:** Aaditi Parab 
+ 
+## **Computing ID:** pmh3sz 
+</span><span class="s0">#%% 
+</span><span class="s2">import </span><span class="s1">pandas </span><span class="s2">as </span><span class="s1">pd</span>
+<span class="s2">import </span><span class="s1">numpy </span><span class="s2">as </span><span class="s1">np</span>
+<span class="s2">import </span><span class="s1">matplotlib</span><span class="s3">.</span><span class="s1">pyplot </span><span class="s2">as </span><span class="s1">plt</span>
+
+<span class="s2">from </span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">model_selection </span><span class="s2">import </span><span class="s1">train_test_split</span>
+<span class="s2">from </span><span class="s1">sklearn </span><span class="s2">import </span><span class="s1">metrics</span>
+<span class="s2">from </span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">metrics </span><span class="s2">import </span><span class="s1">ConfusionMatrixDisplay</span>
+<span class="s2">from </span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">ensemble </span><span class="s2">import </span><span class="s1">RandomForestClassifier</span>
+
+<span class="s1">!pip install lime</span>
+<span class="s2">from </span><span class="s1">lime </span><span class="s2">import </span><span class="s1">lime_tabular</span>
+<span class="s2">from </span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">inspection </span><span class="s2">import </span><span class="s1">permutation_importance</span>
+
+<span class="s0"># Below is a new package needed for this lab</span>
+<span class="s1">!pip install ucimlrepo</span>
+<span class="s2">from </span><span class="s1">ucimlrepo </span><span class="s2">import </span><span class="s1">fetch_ucirepo</span>
+<span class="s0">#%% md 
+</span><span class="s1"># Lab 3: Decision Trees and Random Forests (100 Points) 
+</span><span class="s0">#%% md 
+</span><span class="s1">[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/17jL6-gLQWYkZJZGzAduIlU4YET0u2Ek-?usp=sharing) 
+</span><span class="s0">#%% md 
+</span><span class="s1">The goal of this lab is to optimize Decision Tree and Random Forest models using the provided dataset on census level data. Your goal is to build a Random Forest Classifier to be able to predict income levels above or below 50k. 
+ 
+The guidance this week is less prescriptive in terms of steps, so use the skills you have gained over the semester to build and evaluate your models. You will be graded on your model building, interpretation of the results and explanation of model selection. As always, you are welcome to rely on your classmates but submit your own code. Lastly, there are likely several correct approaches involving a variety of different conclusions, just make sure your conclusions are supported by your approach. 
+</span><span class="s0">#%% md 
+</span>
+<span class="s1">The dataset should be familiar as it's the census data, on 48,000+ individuals with a variety of variables and a target variable for above or below 50k in salary. 
+</span><span class="s0">#%% md 
+</span><span class="s1">![](https://www.coopercenter.org/sites/default/files/styles/wide/public/wordpress_import/Figure1CesnsuBlog2-1024x512_0.png?itok=DwYqkfFm) 
+</span><span class="s0">#%% md 
+</span><span class="s1">Look through the data dictionary at its source link: https://archive.ics.uci.edu/ml/datasets/Adult 
+</span><span class="s0">#%% md 
+</span><span class="s1"># **Part 1: Data Preparation and EDA (15 points)** 
+</span><span class="s0">#%% md 
+</span><span class="s1">In a text cell, answer the following exploratory questions and support your observations with any code, if needed. 
+</span><span class="s0">#%% md 
+</span><span class="s1">## **Question 1 (2 points):** 
+## Read in the features (X) as a Pandas DataFrame. Show the first 5 rows of the features. How many rows do you have? 
+ 
+ 
+</span><span class="s0">#%% 
+# Fetch dataset</span>
+<span class="s1">adult </span><span class="s3">= </span><span class="s1">fetch_ucirepo</span><span class="s3">(</span><span class="s1">id</span><span class="s3">=</span><span class="s4">2</span><span class="s3">)</span>
+
+<span class="s1">X </span><span class="s3">= </span><span class="s1">adult</span><span class="s3">.</span><span class="s1">data</span><span class="s3">.</span><span class="s1">features</span>
+<span class="s1">y </span><span class="s3">= </span><span class="s1">adult</span><span class="s3">.</span><span class="s1">data</span><span class="s3">.</span><span class="s1">targets</span>
+<span class="s0">#%% 
+</span><span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;number of rows: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">len</span><span class="s3">(</span><span class="s1">X</span><span class="s3">)))</span>
+<span class="s1">X</span><span class="s3">.</span><span class="s1">head</span><span class="s3">()</span>
+
+<span class="s0">#%% md 
+</span><span class="s1">**There are a total of 48842 rows.** 
+</span><span class="s0">#%% md 
+</span><span class="s1">## **Question 2 (2 points):** 
+## Are there any potential issues in the data or target that need to be corrected? Why are they issues? What specific method would you use to correct them and why? 
+ 
+## Consider using code and reading the data description (https://archive.ics.uci.edu/dataset/2/adult) to explore: 
+ 
+*   Assumptions and ranges of collected data 
+- ages: &gt;16 (must not be children) 
+- agi: &gt;100 (removes points with very low incomes under 100) 
+- final weight (AFNLWGT) &gt;1 
+- hours worked: &gt;0 (must be employed to make money) 
+ 
+*   Missing values (impute? drop?) 
+- workclass, occupation, native country, impute 
+- drop fnlwgt feauture,  
+ 
+*   Numerical data types represented as strings 
+- none 
+ 
+*   Encoding categorical data appropriately 
+- one hot encoding 
+ 
+*   Normalization- not required 
+*   Standardization- not required 
+ 
+## You will not need to consider feature imbalances or sampling in part 1 or 2 of the lab. 
+</span><span class="s0">#%% 
+</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Potential Issues:** Potential issues I've identified are.... 
+1. MISSING VALUES 
+Some categorical features such as workclass, occupation, and native country have missing values and NaNs. The decision tree model may not be able to handle these missing values but this can be fixed by imputing missing values with the mode of features. 
+2. AFNLWGT 
+This feature is likely not correlated with salary and should be removed.  
+3. ENCODING 
+Categorical text features must be converted to numerical before modeling the tree. One hot encoding can convert these categorical variables into binary 
+  
+</span><span class="s0">#%% md 
+</span><span class="s1">## **Question 3 (6 points):** 
+## Preprocess the data according to the issues and correction methods you've identified. Save the new features and target variable (if necessary) as X_clean and y_clean. 
+</span><span class="s0">#%% 
+</span><span class="s2">from </span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">preprocessing </span><span class="s2">import </span><span class="s1">OneHotEncoder</span>
+<span class="s2">from </span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">impute </span><span class="s2">import </span><span class="s1">SimpleImputer</span>
+
+<span class="s0">#1. missing values</span>
+<span class="s1">X</span><span class="s3">=</span><span class="s1">X</span><span class="s3">.</span><span class="s1">replace</span><span class="s3">([</span><span class="s5">'null'</span><span class="s3">, </span><span class="s5">''</span><span class="s3">,</span><span class="s5">'-'</span><span class="s3">, </span><span class="s5">'?'</span><span class="s3">], </span><span class="s1">np</span><span class="s3">.</span><span class="s1">nan</span><span class="s3">)</span>
+<span class="s1">mode_imputer </span><span class="s3">= </span><span class="s1">SimpleImputer</span><span class="s3">(</span><span class="s1">strategy</span><span class="s3">=</span><span class="s5">'most_frequent'</span><span class="s3">)</span>
+<span class="s1">missing_val_col </span><span class="s3">= [ </span><span class="s5">'workclass'</span><span class="s3">, </span><span class="s5">'occupation'</span><span class="s3">, </span><span class="s5">'native-country'</span><span class="s3">]</span>
+<span class="s1">X</span><span class="s3">[</span><span class="s1">missing_val_col</span><span class="s3">] = </span><span class="s1">mode_imputer</span><span class="s3">.</span><span class="s1">fit_transform</span><span class="s3">(</span><span class="s1">X</span><span class="s3">[</span><span class="s1">missing_val_col</span><span class="s3">])</span>
+
+<span class="s0">#2 drop fnlwgt</span>
+<span class="s1">X </span><span class="s3">= </span><span class="s1">X</span><span class="s3">.</span><span class="s1">drop</span><span class="s3">(</span><span class="s1">columns</span><span class="s3">=[</span><span class="s5">'fnlwgt'</span><span class="s3">])</span>
+
+<span class="s0">#3 encoding categorical data</span>
+<span class="s1">categorical_cols </span><span class="s3">= </span><span class="s1">X</span><span class="s3">.</span><span class="s1">select_dtypes</span><span class="s3">(</span><span class="s1">include</span><span class="s3">=</span><span class="s5">'object'</span><span class="s3">).</span><span class="s1">columns</span><span class="s3">.</span><span class="s1">tolist</span><span class="s3">()</span>
+
+<span class="s2">if </span><span class="s1">len</span><span class="s3">(</span><span class="s1">categorical_cols</span><span class="s3">)&gt;</span><span class="s4">0</span><span class="s3">:</span>
+    <span class="s1">encoder </span><span class="s3">= </span><span class="s1">OneHotEncoder</span><span class="s3">(</span><span class="s1">sparse_output</span><span class="s3">=</span><span class="s2">False</span><span class="s3">)</span>
+    <span class="s1">encoded_features </span><span class="s3">= </span><span class="s1">encoder</span><span class="s3">.</span><span class="s1">fit_transform</span><span class="s3">(</span><span class="s1">X</span><span class="s3">[</span><span class="s1">categorical_cols</span><span class="s3">])</span>
+
+    <span class="s1">encoded_df</span><span class="s3">=</span><span class="s1">pd</span><span class="s3">.</span><span class="s1">DataFrame</span><span class="s3">(</span>
+        <span class="s1">encoded_features</span><span class="s3">,</span>
+        <span class="s1">columns</span><span class="s3">=</span><span class="s1">encoder</span><span class="s3">.</span><span class="s1">get_feature_names_out</span><span class="s3">(</span><span class="s1">categorical_cols</span><span class="s3">),</span>
+        <span class="s1">index</span><span class="s3">=</span><span class="s1">X</span><span class="s3">.</span><span class="s1">index</span><span class="s3">)</span>
+    <span class="s1">X_clean </span><span class="s3">= </span><span class="s1">pd</span><span class="s3">.</span><span class="s1">concat</span><span class="s3">([</span><span class="s1">X</span><span class="s3">.</span><span class="s1">drop</span><span class="s3">(</span><span class="s1">columns</span><span class="s3">=</span><span class="s1">categorical_cols</span><span class="s3">), </span><span class="s1">encoded_df</span><span class="s3">], </span><span class="s1">axis</span><span class="s3">=</span><span class="s4">1</span><span class="s3">)</span>
+
+<span class="s2">else</span><span class="s3">:</span>
+    <span class="s1">X_clean</span><span class="s3">=</span><span class="s1">X</span>
+
+<span class="s0">#X = pd.concat([X, encoded_df], axis=1)</span>
+<span class="s0">#X_clean = X.drop(categorical_cols, errors='ignore')</span>
+
+<span class="s1">target_col </span><span class="s3">= </span><span class="s1">y</span><span class="s3">[</span><span class="s5">'income'</span><span class="s3">]</span>
+<span class="s1">y_clean </span><span class="s3">= </span><span class="s1">target_col</span><span class="s3">.</span><span class="s1">str</span><span class="s3">.</span><span class="s1">strip</span><span class="s3">().</span><span class="s1">str</span><span class="s3">.</span><span class="s1">replace</span><span class="s3">(</span><span class="s5">'.'</span><span class="s3">, </span><span class="s5">''</span><span class="s3">, </span><span class="s1">regex</span><span class="s3">=</span><span class="s2">False</span><span class="s3">)</span>
+
+
+
+
+
+
+<span class="s0">#%% md 
+</span><span class="s1">## **Question 4 (5 points):** 
+## Create 2 versions of y_clean to create a new target response of whether income is above or below $50,000 for classification. 
+ 
+1.   **y_clean_binary:** Recode y_clean to be 1 if the target is over or equal to 
+2.   **y_clean_string:** Recode y_clean to be &quot;Above or Equal&quot; if the target is over or equal to 50,000 and &quot;Below&quot; if under. 
+ 
+ 
+</span><span class="s0">#%% 
+</span><span class="s1">y_clean_binary </span><span class="s3">= </span><span class="s1">y_clean</span><span class="s3">.</span><span class="s1">replace</span><span class="s3">({</span><span class="s5">'&lt;=50K'</span><span class="s3">: </span><span class="s4">0</span><span class="s3">, </span><span class="s5">'&gt;50K'</span><span class="s3">: </span><span class="s4">1</span><span class="s3">})</span>
+
+<span class="s1">y_clean_string </span><span class="s3">= </span><span class="s1">y_clean</span><span class="s3">.</span><span class="s1">replace</span><span class="s3">({</span><span class="s5">'&lt;=50K'</span><span class="s3">: </span><span class="s5">'Below'</span><span class="s3">, </span><span class="s5">'&gt;50K'</span><span class="s3">: </span><span class="s5">'Above or Equal'</span><span class="s3">})</span>
+
+<span class="s5">'''print(y_clean_binary.value_counts()) 
+print(y_clean_string.value_counts())'''</span>
+
+<span class="s0">#%% md 
+</span><span class="s1"># **Part 2: Decision Tree Pruning, Tuning and Evaluation (30 Points)** 
+</span><span class="s0">#%% md 
+</span><span class="s1">## **Question 1 (5 points):** 
+## Create a function to take in a feature variable (X) and (y). In this function, create a train test split with a random seed of 3001. 
+ 
+## Use a vanilla decision tree model to fit the model on the train set and predict on the test set. Print the precision, recall, and accuracy of the model after prediction. 
+ 
+## Test that your function runs on both y_clean_binary and y_clean_string. For any of the following questions, you may use whichever y_clean variable you'd like. 
+ 
+</span><span class="s0">#%% 
+</span><span class="s2">from </span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">metrics </span><span class="s2">import </span><span class="s1">accuracy_score</span><span class="s3">, </span><span class="s1">precision_score</span><span class="s3">, </span><span class="s1">recall_score</span>
+<span class="s2">from </span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">tree </span><span class="s2">import </span><span class="s1">DecisionTreeClassifier</span>
+
+
+<span class="s2">def </span><span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X</span><span class="s3">,</span><span class="s1">y</span><span class="s3">):</span>
+    <span class="s0">#train test split</span>
+    <span class="s1">X_train</span><span class="s3">, </span><span class="s1">X_test</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">, </span><span class="s1">y_test </span><span class="s3">= </span><span class="s1">train_test_split</span><span class="s3">(</span><span class="s1">X</span><span class="s3">, </span><span class="s1">y</span><span class="s3">, </span><span class="s1">test_size</span><span class="s3">=</span><span class="s4">0.3</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+    
+    <span class="s0">#vanilla decision tree model</span>
+    <span class="s1">vanilla_tree</span><span class="s3">=</span><span class="s1">DecisionTreeClassifier</span><span class="s3">(</span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+    <span class="s1">vanilla_tree</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+    <span class="s1">y_pred </span><span class="s3">= </span><span class="s1">vanilla_tree</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+    
+<span class="s0">#need to set pos labels correctly based on binary or string</span>
+    <span class="s2">if </span><span class="s1">y_test</span><span class="s3">.</span><span class="s1">dtype </span><span class="s3">== </span><span class="s5">'O'</span><span class="s3">:  </span>
+        <span class="s1">pos </span><span class="s3">= </span><span class="s5">'Above or Equal'</span>
+    <span class="s2">else</span><span class="s3">:</span>
+        <span class="s1">pos </span><span class="s3">= </span><span class="s4">1</span>
+        
+    <span class="s1">acc </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">)</span>
+    <span class="s1">prec </span><span class="s3">= </span><span class="s1">precision_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">, </span><span class="s1">average</span><span class="s3">=</span><span class="s5">'binary'</span><span class="s3">, </span><span class="s1">pos_label</span><span class="s3">=</span><span class="s1">pos</span><span class="s3">)</span>
+    <span class="s1">rec </span><span class="s3">= </span><span class="s1">recall_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">, </span><span class="s1">average</span><span class="s3">=</span><span class="s5">'binary'</span><span class="s3">,</span><span class="s1">pos_label</span><span class="s3">=</span><span class="s1">pos</span><span class="s3">)</span>
+    
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;accuracy: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">acc</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;precision: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">prec</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;recall: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">rec</span><span class="s3">))</span>
+
+<span class="s1">print</span><span class="s3">(</span><span class="s5">'y_clean_string results:'</span><span class="s3">) </span>
+<span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X_clean</span><span class="s3">, </span><span class="s1">y_clean_string</span><span class="s3">)</span>
+<span class="s1">print</span><span class="s3">()</span>
+<span class="s1">print</span><span class="s3">(</span><span class="s5">'y_clean_binary results:'</span><span class="s3">)</span>
+<span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X_clean</span><span class="s3">,</span><span class="s1">y_clean_binary</span><span class="s3">)</span>
+    
+<span class="s0">#%% md 
+</span><span class="s1">## **Question 2 (5 points):** 
+## Adjust your function to include some plotting features. After your prediction code, plot: 
+ 
+1.   A visualization of the resulting decision tree 
+2.   A confusion matrix of the results 
+ 
+## Your tree might be overwhelming or very large! If it is too large to be interpreted, constrain the max_depth parameter manually to 5 or less. 
+</span><span class="s0">#%% 
+</span><span class="s2">import </span><span class="s1">sklearn</span>
+<span class="s2">from </span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">metrics </span><span class="s2">import </span><span class="s1">accuracy_score</span><span class="s3">, </span><span class="s1">precision_score</span><span class="s3">, </span><span class="s1">recall_score</span><span class="s3">, </span><span class="s1">confusion_matrix</span>
+<span class="s2">from </span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">tree </span><span class="s2">import </span><span class="s1">DecisionTreeClassifier</span><span class="s3">, </span><span class="s1">plot_tree</span>
+
+
+<span class="s2">def </span><span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X</span><span class="s3">,</span><span class="s1">y</span><span class="s3">):</span>
+    <span class="s0">#train test split</span>
+    <span class="s1">X_train</span><span class="s3">, </span><span class="s1">X_test</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">, </span><span class="s1">y_test </span><span class="s3">= </span><span class="s1">train_test_split</span><span class="s3">(</span><span class="s1">X</span><span class="s3">, </span><span class="s1">y</span><span class="s3">, </span><span class="s1">test_size</span><span class="s3">=</span><span class="s4">0.3</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+    
+    <span class="s0">#vanilla decision tree model</span>
+    <span class="s1">treemodel</span><span class="s3">=</span><span class="s1">DecisionTreeClassifier</span><span class="s3">(</span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">, </span><span class="s1">max_depth</span><span class="s3">=</span><span class="s4">5</span><span class="s3">)</span>
+    <span class="s1">treemodel</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+    <span class="s1">y_pred </span><span class="s3">= </span><span class="s1">treemodel</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+    
+    <span class="s0">#need to set pos labels correctly based on binary or string</span>
+    <span class="s2">if </span><span class="s1">y_test</span><span class="s3">.</span><span class="s1">dtype </span><span class="s3">== </span><span class="s5">'O'</span><span class="s3">:  </span>
+        <span class="s1">pos </span><span class="s3">= </span><span class="s5">'Above or Equal'</span>
+    <span class="s2">else</span><span class="s3">:</span>
+        <span class="s1">pos </span><span class="s3">= </span><span class="s4">1</span>
+    
+    <span class="s0">#get/print metrics</span>
+    <span class="s1">acc </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">)</span>
+    <span class="s1">prec </span><span class="s3">= </span><span class="s1">precision_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">, </span><span class="s1">average</span><span class="s3">=</span><span class="s5">'binary'</span><span class="s3">, </span><span class="s1">pos_label</span><span class="s3">=</span><span class="s1">pos</span><span class="s3">)</span>
+    <span class="s1">rec </span><span class="s3">= </span><span class="s1">recall_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">, </span><span class="s1">average</span><span class="s3">=</span><span class="s5">'binary'</span><span class="s3">,</span><span class="s1">pos_label</span><span class="s3">=</span><span class="s1">pos</span><span class="s3">)</span>
+    
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;accuracy: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">acc</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;precision: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">prec</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;recall: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">rec</span><span class="s3">))</span>
+    
+    <span class="s0">##adding in visualization of the tree</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">figure</span><span class="s3">(</span><span class="s1">figsize</span><span class="s3">=(</span><span class="s4">20</span><span class="s3">,</span><span class="s4">10</span><span class="s3">))</span>
+    <span class="s1">plot_tree</span><span class="s3">(</span><span class="s1">treemodel</span><span class="s3">, </span><span class="s1">filled</span><span class="s3">=</span><span class="s2">True</span><span class="s3">, </span><span class="s1">feature_names</span><span class="s3">=</span><span class="s1">X_clean</span><span class="s3">.</span><span class="s1">columns</span><span class="s3">, </span><span class="s1">fontsize</span><span class="s3">=</span><span class="s4">10</span><span class="s3">)</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">title</span><span class="s3">(</span><span class="s5">'Decision Tree for Adult Dataset'</span><span class="s3">)</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">show</span><span class="s3">()</span>
+    
+    
+    <span class="s1">cm</span><span class="s3">=</span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">metrics</span><span class="s3">.</span><span class="s1">confusion_matrix</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">, </span><span class="s1">sample_weight</span><span class="s3">=</span><span class="s2">None</span><span class="s3">, </span><span class="s1">normalize</span><span class="s3">=</span><span class="s2">None</span><span class="s3">)</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s1">cm</span><span class="s3">)</span>
+ 
+<span class="s0">#call the function   </span>
+<span class="s1">print</span><span class="s3">(</span><span class="s5">'y_clean_string results:'</span><span class="s3">) </span>
+<span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X_clean</span><span class="s3">, </span><span class="s1">y_clean_string</span><span class="s3">)</span>
+<span class="s1">print</span><span class="s3">()</span>
+<span class="s1">print</span><span class="s3">(</span><span class="s5">'y_clean_binary results:'</span><span class="s3">)</span>
+<span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X_clean</span><span class="s3">,</span><span class="s1">y_clean_binary</span><span class="s3">)</span>
+
+
+    
+
+
+
+
+
+
+<span class="s0">#%% md 
+</span><span class="s1">## **Question 3 (5 points):** 
+## Create a sorted list of feature importances and comment on the top features.Are there a few that seem to be more important than the others? 
+ 
+## Plot your feature importances in a horizontal or vertical bar chart from most to least important. Label each bar with its feature importance rounded to the nearest integer (ie: 30%). 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X</span><span class="s3">,</span><span class="s1">y</span><span class="s3">):</span>
+    <span class="s0">#TRAIN TEST SPLIT</span>
+    <span class="s1">X_train</span><span class="s3">, </span><span class="s1">X_test</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">, </span><span class="s1">y_test </span><span class="s3">= </span><span class="s1">train_test_split</span><span class="s3">(</span><span class="s1">X</span><span class="s3">, </span><span class="s1">y</span><span class="s3">, </span><span class="s1">test_size</span><span class="s3">=</span><span class="s4">0.3</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+    
+    <span class="s0">#DECISION TREE MODEL</span>
+    <span class="s1">treemodel</span><span class="s3">=</span><span class="s1">DecisionTreeClassifier</span><span class="s3">(</span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">, </span><span class="s1">max_depth</span><span class="s3">=</span><span class="s4">5</span><span class="s3">)</span>
+    <span class="s1">treemodel</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+    <span class="s1">y_pred </span><span class="s3">= </span><span class="s1">treemodel</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+    
+    <span class="s0">#need to set pos labels correctly based on binary or string</span>
+    <span class="s2">if </span><span class="s1">y_test</span><span class="s3">.</span><span class="s1">dtype </span><span class="s3">== </span><span class="s5">'O'</span><span class="s3">:  </span>
+        <span class="s1">pos </span><span class="s3">= </span><span class="s5">'Above or Equal'</span>
+    <span class="s2">else</span><span class="s3">:</span>
+        <span class="s1">pos </span><span class="s3">= </span><span class="s4">1</span>
+    
+    <span class="s0">#OBTAIN AND PRINT METRICS (accuracy, precision, recall)</span>
+    <span class="s1">acc </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">)</span>
+    <span class="s1">prec </span><span class="s3">= </span><span class="s1">precision_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">, </span><span class="s1">average</span><span class="s3">=</span><span class="s5">'binary'</span><span class="s3">, </span><span class="s1">pos_label</span><span class="s3">=</span><span class="s1">pos</span><span class="s3">)</span>
+    <span class="s1">rec </span><span class="s3">= </span><span class="s1">recall_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">, </span><span class="s1">average</span><span class="s3">=</span><span class="s5">'binary'</span><span class="s3">,</span><span class="s1">pos_label</span><span class="s3">=</span><span class="s1">pos</span><span class="s3">)</span>
+    
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;accuracy: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">acc</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;precision: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">prec</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;recall: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">rec</span><span class="s3">))</span>
+    
+    <span class="s0">##VISUALIZATION OF TREE</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">figure</span><span class="s3">(</span><span class="s1">figsize</span><span class="s3">=(</span><span class="s4">20</span><span class="s3">,</span><span class="s4">10</span><span class="s3">))</span>
+    <span class="s1">plot_tree</span><span class="s3">(</span><span class="s1">treemodel</span><span class="s3">, </span><span class="s1">filled</span><span class="s3">=</span><span class="s2">True</span><span class="s3">, </span><span class="s1">feature_names</span><span class="s3">=</span><span class="s1">X_clean</span><span class="s3">.</span><span class="s1">columns</span><span class="s3">, </span><span class="s1">fontsize</span><span class="s3">=</span><span class="s4">10</span><span class="s3">)</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">title</span><span class="s3">(</span><span class="s5">'Decision Tree for Adult Dataset'</span><span class="s3">)</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">show</span><span class="s3">()</span>
+    
+    <span class="s0">##CONFUSION MATRIX</span>
+    <span class="s1">cm</span><span class="s3">=</span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">metrics</span><span class="s3">.</span><span class="s1">confusion_matrix</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">, </span><span class="s1">sample_weight</span><span class="s3">=</span><span class="s2">None</span><span class="s3">, </span><span class="s1">normalize</span><span class="s3">=</span><span class="s2">None</span><span class="s3">)</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">'confusion matrix:'</span><span class="s3">)</span>
+    
+    <span class="s1">print</span><span class="s3">(</span><span class="s1">cm</span><span class="s3">)</span>
+    <span class="s1">print</span><span class="s3">()</span>
+    
+    
+    <span class="s0">#FEATURE IMPORTANCES LIST AND PLOTTING</span>
+    <span class="s1">feat_imp </span><span class="s3">= </span><span class="s1">pd</span><span class="s3">.</span><span class="s1">Series</span><span class="s3">(</span><span class="s1">treemodel</span><span class="s3">.</span><span class="s1">feature_importances_</span><span class="s3">, </span><span class="s1">index</span><span class="s3">=</span><span class="s1">X_clean</span><span class="s3">.</span><span class="s1">columns</span><span class="s3">)</span>
+    <span class="s1">feat_imp </span><span class="s3">= </span><span class="s1">feat_imp</span><span class="s3">.</span><span class="s1">sort_values</span><span class="s3">(</span><span class="s1">ascending</span><span class="s3">=</span><span class="s2">False</span><span class="s3">)  </span><span class="s0">#sort the list</span>
+
+    <span class="s1">percentage </span><span class="s3">= (</span><span class="s1">feat_imp </span><span class="s3">* </span><span class="s4">100</span><span class="s3">).</span><span class="s1">round</span><span class="s3">(</span><span class="s4">0</span><span class="s3">).</span><span class="s1">astype</span><span class="s3">(</span><span class="s1">int</span><span class="s3">) </span><span class="s0">#makes percentages and round</span>
+    <span class="s1">top </span><span class="s3">= </span><span class="s1">percentage</span><span class="s3">.</span><span class="s1">head</span><span class="s3">(</span><span class="s4">6</span><span class="s3">)</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s1">top</span><span class="s3">) </span><span class="s0">#print top 6 most important</span>
+    
+    <span class="s0">#bar plot of feature importances</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">figure</span><span class="s3">()</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">barh</span><span class="s3">(</span><span class="s1">top</span><span class="s3">.</span><span class="s1">index</span><span class="s3">[::-</span><span class="s4">1</span><span class="s3">],</span><span class="s1">top</span><span class="s3">.</span><span class="s1">values</span><span class="s3">[::-</span><span class="s4">1</span><span class="s3">])</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">xlabel</span><span class="s3">(</span><span class="s5">'Feature Importance Percentage'</span><span class="s3">)</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">ylabel</span><span class="s3">(</span><span class="s5">'Features'</span><span class="s3">)</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">title</span><span class="s3">(</span><span class="s5">'Feature Importances for Adult Dataset'</span><span class="s3">)</span>
+    <span class="s2">for </span><span class="s1">i</span><span class="s3">, (</span><span class="s1">val</span><span class="s3">, </span><span class="s1">name</span><span class="s3">) </span><span class="s2">in </span><span class="s1">enumerate</span><span class="s3">(</span><span class="s1">zip</span><span class="s3">(</span><span class="s1">top</span><span class="s3">.</span><span class="s1">values</span><span class="s3">[::-</span><span class="s4">1</span><span class="s3">], </span><span class="s1">top</span><span class="s3">.</span><span class="s1">index</span><span class="s3">[::-</span><span class="s4">1</span><span class="s3">])): </span><span class="s0">#used chatgpt to edit this</span>
+        <span class="s1">plt</span><span class="s3">.</span><span class="s1">text</span><span class="s3">(</span><span class="s1">val </span><span class="s3">+ </span><span class="s4">1</span><span class="s3">, </span><span class="s1">i</span><span class="s3">, </span><span class="s5">f&quot;</span><span class="s2">{</span><span class="s1">val</span><span class="s2">}</span><span class="s5">%&quot;</span><span class="s3">, </span><span class="s1">va</span><span class="s3">=</span><span class="s5">'center'</span><span class="s3">)</span>
+    
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">show</span><span class="s3">()</span>
+    
+    
+    
+    
+    
+    
+
+<span class="s1">print</span><span class="s3">(</span><span class="s5">'y_clean_binary results:'</span><span class="s3">)</span>
+<span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X_clean</span><span class="s3">,</span><span class="s1">y_clean_binary</span><span class="s3">)</span>
+<span class="s0">#%% md 
+</span>
+<span class="s1">## **Question 4 (5 points):** 
+## Write at least 5 sentences interpreting the results of your decision tree, confusion matrix, and feature importance visualizations. 
+ 
+## Is there any aspect of your results that you are uncertain or unsure of? 
+</span><span class="s0">#%% md 
+</span><span class="s1">**My results show... 
+Confusion matrix: The model correctly classified a high number of true negatives, individuals with income&lt;50k. There were a high number of false negatives which shows that many high income data points are being classified as low income. This aligns with the high accuracy and lower recall. 
+The feature importances and decision tree show that marital status, education, and capital gain were top indicators of income being over or under 50k. Features not shown on the plot have feature importance under 1%, indicating that just a few top features drive the prediction. I am unsure of why martial status is showing as the top feature because I would have guessed education or age. 
+** 
+ 
+</span><span class="s0">#%% md 
+</span><span class="s1">## **Question 5 (5 points):** 
+## Finally, we will create a new function to tune your decision tree to get more accurate and efficient results. Update your function to take in several new parameters with these default values: 
+* criterion_val ='gini' 
+* splitter_val ='best' 
+* max_depth_val = None 
+* min_samples_split_val = 2 
+* min_samples_leaf_val =1 
+ 
+## Pass your own variable into the decision tree by specifying what sklearn parameter you are trying to tune. This will simply be the parameter without the &quot;_val&quot; suffix. 
+ 
+## **For example, if your vanilla decision tree variable is called clf, you would adjust it like this:** 
+`clf = DecisionTreeClassifier(criterion=criterion_val, splitter=splitter_val, ...)` 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X</span><span class="s3">,</span><span class="s1">y</span><span class="s3">, </span><span class="s1">criterion_val </span><span class="s3">=</span><span class="s5">'gini'</span><span class="s3">, </span><span class="s1">splitter_val </span><span class="s3">=</span><span class="s5">'best'</span><span class="s3">, </span><span class="s1">max_depth_val </span><span class="s3">= </span><span class="s2">None</span><span class="s3">, </span><span class="s1">min_samples_split_val </span><span class="s3">= </span><span class="s4">2</span><span class="s3">, </span><span class="s1">min_samples_leaf_val </span><span class="s3">=</span><span class="s4">1</span><span class="s3">):</span>
+    <span class="s0">#TRAIN TEST SPLIT</span>
+    <span class="s1">X_train</span><span class="s3">, </span><span class="s1">X_test</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">, </span><span class="s1">y_test </span><span class="s3">= </span><span class="s1">train_test_split</span><span class="s3">(</span><span class="s1">X</span><span class="s3">, </span><span class="s1">y</span><span class="s3">, </span><span class="s1">test_size</span><span class="s3">=</span><span class="s4">0.3</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+    
+    <span class="s0">#DECISION TREE MODEL (add parameters)</span>
+    <span class="s1">treemodel</span><span class="s3">=</span><span class="s1">DecisionTreeClassifier</span><span class="s3">(</span><span class="s1">criterion</span><span class="s3">=</span><span class="s1">criterion_val</span><span class="s3">, </span><span class="s1">splitter</span><span class="s3">=</span><span class="s1">splitter_val</span><span class="s3">, </span><span class="s1">max_depth</span><span class="s3">=</span><span class="s1">max_depth_val</span><span class="s3">, </span><span class="s1">min_samples_split</span><span class="s3">=</span><span class="s1">min_samples_split_val</span><span class="s3">, </span><span class="s1">min_samples_leaf</span><span class="s3">=</span><span class="s1">min_samples_leaf_val</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+    <span class="s1">treemodel</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+    <span class="s1">y_pred </span><span class="s3">= </span><span class="s1">treemodel</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+    
+    <span class="s0">#need to set pos labels correctly based on binary or string</span>
+    <span class="s2">if </span><span class="s1">y_test</span><span class="s3">.</span><span class="s1">dtype </span><span class="s3">== </span><span class="s5">'O'</span><span class="s3">:  </span>
+        <span class="s1">pos </span><span class="s3">= </span><span class="s5">'Above or Equal'</span>
+    <span class="s2">else</span><span class="s3">:</span>
+        <span class="s1">pos </span><span class="s3">= </span><span class="s4">1</span>
+    
+    <span class="s0">#OBTAIN AND PRINT METRICS (accuracy, precision, recall)</span>
+    <span class="s1">acc </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">)</span>
+    <span class="s1">prec </span><span class="s3">= </span><span class="s1">precision_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">, </span><span class="s1">average</span><span class="s3">=</span><span class="s5">'binary'</span><span class="s3">, </span><span class="s1">pos_label</span><span class="s3">=</span><span class="s1">pos</span><span class="s3">)</span>
+    <span class="s1">rec </span><span class="s3">= </span><span class="s1">recall_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">, </span><span class="s1">average</span><span class="s3">=</span><span class="s5">'binary'</span><span class="s3">,</span><span class="s1">pos_label</span><span class="s3">=</span><span class="s1">pos</span><span class="s3">)</span>
+    
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;accuracy: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">acc</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;precision: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">prec</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;recall: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">rec</span><span class="s3">))</span>
+    
+    <span class="s0">##VISUALIZATION OF TREE</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">figure</span><span class="s3">(</span><span class="s1">figsize</span><span class="s3">=(</span><span class="s4">20</span><span class="s3">,</span><span class="s4">10</span><span class="s3">))</span>
+    <span class="s1">plot_tree</span><span class="s3">(</span><span class="s1">treemodel</span><span class="s3">, </span><span class="s1">filled</span><span class="s3">=</span><span class="s2">True</span><span class="s3">, </span><span class="s1">feature_names</span><span class="s3">=</span><span class="s1">X_clean</span><span class="s3">.</span><span class="s1">columns</span><span class="s3">, </span><span class="s1">fontsize</span><span class="s3">=</span><span class="s4">10</span><span class="s3">)</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">title</span><span class="s3">(</span><span class="s5">'Decision Tree for Adult Dataset'</span><span class="s3">)</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">show</span><span class="s3">()</span>
+    
+    <span class="s0">##CONFUSION MATRIX</span>
+    <span class="s1">cm</span><span class="s3">=</span><span class="s1">sklearn</span><span class="s3">.</span><span class="s1">metrics</span><span class="s3">.</span><span class="s1">confusion_matrix</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">y_pred</span><span class="s3">, </span><span class="s1">sample_weight</span><span class="s3">=</span><span class="s2">None</span><span class="s3">, </span><span class="s1">normalize</span><span class="s3">=</span><span class="s2">None</span><span class="s3">)</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">'confusion matrix:'</span><span class="s3">)</span>
+    
+    <span class="s1">print</span><span class="s3">(</span><span class="s1">cm</span><span class="s3">)</span>
+    <span class="s1">print</span><span class="s3">()</span>
+    
+    
+    <span class="s0">#FEATURE IMPORTANCES LIST AND PLOTTING</span>
+    <span class="s1">feat_imp </span><span class="s3">= </span><span class="s1">pd</span><span class="s3">.</span><span class="s1">Series</span><span class="s3">(</span><span class="s1">treemodel</span><span class="s3">.</span><span class="s1">feature_importances_</span><span class="s3">, </span><span class="s1">index</span><span class="s3">=</span><span class="s1">X_clean</span><span class="s3">.</span><span class="s1">columns</span><span class="s3">)</span>
+    <span class="s1">feat_imp </span><span class="s3">= </span><span class="s1">feat_imp</span><span class="s3">.</span><span class="s1">sort_values</span><span class="s3">(</span><span class="s1">ascending</span><span class="s3">=</span><span class="s2">False</span><span class="s3">)  </span><span class="s0">#sort the list</span>
+
+    <span class="s1">percentage </span><span class="s3">= (</span><span class="s1">feat_imp </span><span class="s3">* </span><span class="s4">100</span><span class="s3">).</span><span class="s1">round</span><span class="s3">(</span><span class="s4">0</span><span class="s3">).</span><span class="s1">astype</span><span class="s3">(</span><span class="s1">int</span><span class="s3">) </span><span class="s0">#makes percentages and round</span>
+    <span class="s1">top </span><span class="s3">= </span><span class="s1">percentage</span><span class="s3">.</span><span class="s1">head</span><span class="s3">(</span><span class="s4">6</span><span class="s3">)</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s1">top</span><span class="s3">) </span><span class="s0">#print top 6 most important</span>
+    
+    <span class="s0">#bar plot of feature importances</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">figure</span><span class="s3">()</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">barh</span><span class="s3">(</span><span class="s1">top</span><span class="s3">.</span><span class="s1">index</span><span class="s3">[::-</span><span class="s4">1</span><span class="s3">],</span><span class="s1">top</span><span class="s3">.</span><span class="s1">values</span><span class="s3">[::-</span><span class="s4">1</span><span class="s3">])</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">xlabel</span><span class="s3">(</span><span class="s5">'Feature Importance Percentage'</span><span class="s3">)</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">ylabel</span><span class="s3">(</span><span class="s5">'Features'</span><span class="s3">)</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">title</span><span class="s3">(</span><span class="s5">'Feature Importances for Adult Dataset'</span><span class="s3">)</span>
+    <span class="s2">for </span><span class="s1">i</span><span class="s3">, (</span><span class="s1">val</span><span class="s3">, </span><span class="s1">name</span><span class="s3">) </span><span class="s2">in </span><span class="s1">enumerate</span><span class="s3">(</span><span class="s1">zip</span><span class="s3">(</span><span class="s1">top</span><span class="s3">.</span><span class="s1">values</span><span class="s3">[::-</span><span class="s4">1</span><span class="s3">], </span><span class="s1">top</span><span class="s3">.</span><span class="s1">index</span><span class="s3">[::-</span><span class="s4">1</span><span class="s3">])): </span><span class="s0">#used chatgpt to edit this</span>
+        <span class="s1">plt</span><span class="s3">.</span><span class="s1">text</span><span class="s3">(</span><span class="s1">val </span><span class="s3">+ </span><span class="s4">1</span><span class="s3">, </span><span class="s1">i</span><span class="s3">, </span><span class="s5">f&quot;</span><span class="s2">{</span><span class="s1">val</span><span class="s2">}</span><span class="s5">%&quot;</span><span class="s3">, </span><span class="s1">va</span><span class="s3">=</span><span class="s5">'center'</span><span class="s3">)</span>
+    
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">show</span><span class="s3">()</span>
+<span class="s0">#%% md 
+</span><span class="s1">## **Question 6 (5 points):** 
+ 
+## Call your new function with either clean y variable at least 3 times. Each time, vary the values for all the parameters and examine its effects on your tree, confusion matrix, and metrics. 
+ 
+## You will likely want to look at documentation to see accepted values:   
+###https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeClassifier.html 
+ 
+## Why did you pick the values you did? What combination had the best effect on accuracy? Were you surprised by any of the results? 
+</span><span class="s0">#%% 
+</span><span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X_clean</span><span class="s3">, </span><span class="s1">y_clean_binary</span><span class="s3">, </span><span class="s1">max_depth_val</span><span class="s3">=</span><span class="s4">4</span><span class="s3">, </span><span class="s1">min_samples_split_val</span><span class="s3">=</span><span class="s4">20</span><span class="s3">,</span>
+    <span class="s1">min_samples_leaf_val</span><span class="s3">=</span><span class="s4">10</span><span class="s3">) </span><span class="s0">#highly pruned tree, adjusting min samples split and min samples leaf to reduce overfitting</span>
+
+<span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X_clean</span><span class="s3">,</span><span class="s1">y_clean_binary</span><span class="s3">, </span><span class="s1">criterion_val</span><span class="s3">=</span><span class="s5">'entropy'</span><span class="s3">) </span><span class="s0">#want to compare performance of entropy</span>
+
+<span class="s1">tree_fun</span><span class="s3">(</span><span class="s1">X_clean</span><span class="s3">, </span><span class="s1">y_clean_binary</span><span class="s3">, </span><span class="s1">max_depth_val</span><span class="s3">=</span><span class="s4">8</span><span class="s3">, </span><span class="s1">min_samples_split_val</span><span class="s3">=</span><span class="s4">10</span><span class="s3">,</span><span class="s1">min_samples_leaf_val</span><span class="s3">=</span><span class="s4">5</span><span class="s3">) </span><span class="s0">#test a more balanced tree, resulted in the highest accuracy metric</span>
+<span class="s0">#I was surprised that all three options resulted in different percentages for the feature importances, but martial status was still the top feature.</span>
+
+
+<span class="s0">#%% md 
+</span><span class="s1"># **Part 3: Random Forest and Ensembling Evaluation (40 Points)** 
+</span><span class="s0">#%% md 
+</span><span class="s1">## For Parts 3 and 4, you may pick *your own dataset* or continue with the census data. 
+ 
+## Like above, you will want to reference the documentation as necessary: 
+### https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html 
+</span><span class="s0">#%% md 
+</span>
+<span class="s1">## **Data** 
+## Use this space to load and call your data for Parts 3 and 4. You are welcome to use your final project data for these sections. 
+</span><span class="s0">#%% 
+</span>
+<span class="s0">#%% md 
+</span><span class="s1">## **Question 1 (10 points):** 
+ 
+## Write a function to take in a feature variable (X) and a target variable (y). Create a train test split for the variables. 
+ 
+## Finally, instantiate, fit, and predict using **both** a single Decision Tree and a Random Forest classifier. Print the accuracy, precision, and recall for both models. 
+ 
+## Call your function and describe your baseline results. 
+ 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">baseline</span><span class="s3">(</span><span class="s1">X</span><span class="s3">, </span><span class="s1">y</span><span class="s3">):</span>
+     <span class="s0">#TRAIN TEST SPLIT</span>
+    <span class="s1">X_train</span><span class="s3">, </span><span class="s1">X_test</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">, </span><span class="s1">y_test </span><span class="s3">= </span><span class="s1">train_test_split</span><span class="s3">(</span><span class="s1">X</span><span class="s3">, </span><span class="s1">y</span><span class="s3">, </span><span class="s1">test_size</span><span class="s3">=</span><span class="s4">0.3</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+    
+    <span class="s0">#DECISION TREE MODEL (add parameters)</span>
+    <span class="s1">treemodel</span><span class="s3">=</span><span class="s1">DecisionTreeClassifier</span><span class="s3">(</span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+    <span class="s1">treemodel</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+    <span class="s1">tree_y_pred </span><span class="s3">= </span><span class="s1">treemodel</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+     
+    <span class="s0">#OBTAIN AND PRINT METRICS (accuracy, precision, recall)</span>
+    <span class="s1">acc </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">tree_y_pred</span><span class="s3">)</span>
+    <span class="s1">prec </span><span class="s3">= </span><span class="s1">precision_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">tree_y_pred</span><span class="s3">, </span><span class="s1">average</span><span class="s3">=</span><span class="s5">'binary'</span><span class="s3">)</span>
+    <span class="s1">rec </span><span class="s3">= </span><span class="s1">recall_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">tree_y_pred</span><span class="s3">, </span><span class="s1">average</span><span class="s3">=</span><span class="s5">'binary'</span><span class="s3">)</span>
+    
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;decision tree accuracy: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">acc</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;decision tree precision: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">prec</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;decision tree recall: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">rec</span><span class="s3">))</span>
+     
+    <span class="s0">#RANDOM FOREST</span>
+    <span class="s1">forestmodel </span><span class="s3">= </span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+    <span class="s1">forestmodel</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+    <span class="s1">forest_y_pred </span><span class="s3">= </span><span class="s1">forestmodel</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+    
+    <span class="s0">#metrics for random forest</span>
+    <span class="s1">rf_accuracy </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">forest_y_pred</span><span class="s3">)</span>
+    <span class="s1">rf_precision </span><span class="s3">= </span><span class="s1">precision_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">forest_y_pred</span><span class="s3">)</span>
+    <span class="s1">rf_recall </span><span class="s3">= </span><span class="s1">recall_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">forest_y_pred</span><span class="s3">)</span>
+    <span class="s1">print</span><span class="s3">()</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;rf accuracy: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">rf_accuracy</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;rf precision: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">rf_precision</span><span class="s3">))</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">&quot;rf recall: &quot;</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">rf_recall</span><span class="s3">))</span>
+     
+<span class="s1">baseline</span><span class="s3">(</span><span class="s1">X_clean</span><span class="s3">,</span><span class="s1">y_clean_binary</span><span class="s3">) </span><span class="s0">#results have a relatively high accuracy, with the random forests metrics being higher overall</span>
+    
+    
+
+<span class="s0">#%% md 
+</span>
+<span class="s1">## **Question 2 (30 points):** 
+## This question will ask you to tune Random Forest classifiers and preprocess your data in *any number of ways* to achieve the *best possible results you can*. 
+ 
+## Train one vanilla Decision Forest model and one vanilla Random Forest model and store their accuracies in variables so you can use them as baselines. 
+ 
+## Then, using functions or not, spend some time tuning at least 10 (or more) Random Forest models. Store your accuracies in a list or array and print your maximum accuracy. 
+ 
+# **Go crazy - feel free to implement sampling, dropping features, preprocessing, new parameters, whatever might boost your accuracy.** 
+ 
+# **The top 5 best accuracies in the class will get +15 on their individual lab grade!** 
+</span><span class="s0">#%% 
+</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">X_test</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">, </span><span class="s1">y_test </span><span class="s3">= </span><span class="s1">train_test_split</span><span class="s3">(</span>
+    <span class="s1">X_clean</span><span class="s3">, </span><span class="s1">y_clean_binary</span><span class="s3">, </span><span class="s1">test_size</span><span class="s3">=</span><span class="s4">0.3</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+
+<span class="s0">#Baseline Decision Tree</span>
+<span class="s1">baselinedt </span><span class="s3">= </span><span class="s1">DecisionTreeClassifier</span><span class="s3">(</span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">baselinedt</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">dt_pred </span><span class="s3">= </span><span class="s1">baselinedt</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">baselineDT_acc </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">dt_pred</span><span class="s3">)</span>
+<span class="s1">print</span><span class="s3">(</span><span class="s5">'baseline decision tree accuracy: '</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">baselineDT_acc</span><span class="s3">))</span>
+
+<span class="s0">#Baseline Random Forest</span>
+<span class="s1">baselinerf </span><span class="s3">= </span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">baselinerf</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">rf_pred </span><span class="s3">= </span><span class="s1">baselinerf</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">baselineRF_acc </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">rf_pred</span><span class="s3">)</span>
+<span class="s1">print</span><span class="s3">(</span><span class="s5">'baseline random forest accuracy: '</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">baselineRF_acc</span><span class="s3">))</span>
+
+
+<span class="s0">#tuning random forest</span>
+
+<span class="s0">#trying with many more trees</span>
+<span class="s1">rf1</span><span class="s3">=</span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">n_estimators</span><span class="s3">=</span><span class="s4">200</span><span class="s3">,</span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">rf1</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">pred1</span><span class="s3">= </span><span class="s1">rf1</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">acc1 </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">,</span><span class="s1">pred1</span><span class="s3">)</span>
+
+<span class="s1">rf2</span><span class="s3">=</span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">n_estimators</span><span class="s3">=</span><span class="s4">500</span><span class="s3">,</span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">rf2</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">pred2</span><span class="s3">= </span><span class="s1">rf2</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">acc2 </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">,</span><span class="s1">pred2</span><span class="s3">)</span>
+
+<span class="s0">#different depths</span>
+<span class="s1">rf3 </span><span class="s3">= </span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">max_depth</span><span class="s3">=</span><span class="s4">10</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">rf3</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">pred3 </span><span class="s3">= </span><span class="s1">rf3</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">acc3 </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">pred3</span><span class="s3">)</span>
+
+<span class="s1">rf4 </span><span class="s3">= </span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">max_depth</span><span class="s3">=</span><span class="s4">30</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">rf4</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">pred4 </span><span class="s3">= </span><span class="s1">rf4</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">acc4</span><span class="s3">=</span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">,</span><span class="s1">pred4</span><span class="s3">)</span>
+
+<span class="s0">#higher min samples leaf</span>
+<span class="s1">rf5 </span><span class="s3">= </span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">min_samples_leaf</span><span class="s3">=</span><span class="s4">7</span><span class="s3">, </span><span class="s1">n_estimators</span><span class="s3">=</span><span class="s4">200</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">rf5</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">pred5 </span><span class="s3">= </span><span class="s1">rf5</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">acc5 </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">pred5</span><span class="s3">)</span>
+
+<span class="s0">#larger min samples splkit</span>
+<span class="s1">rf6 </span><span class="s3">= </span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">min_samples_split</span><span class="s3">=</span><span class="s4">10</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">rf6</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">pred6 </span><span class="s3">= </span><span class="s1">rf6</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">acc6 </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">pred6</span><span class="s3">)</span>
+
+<span class="s0">#trying different max features</span>
+<span class="s1">rf7 </span><span class="s3">= </span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">max_features</span><span class="s3">=</span><span class="s5">&quot;log2&quot;</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">rf7</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">pred7 </span><span class="s3">= </span><span class="s1">rf7</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">acc7 </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">pred7</span><span class="s3">)</span>
+
+<span class="s0">#change bootstrapping to false</span>
+<span class="s1">rf8 </span><span class="s3">= </span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">bootstrap</span><span class="s3">=</span><span class="s2">False</span><span class="s3">, </span><span class="s1">n_estimators</span><span class="s3">=</span><span class="s4">200</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">rf8</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">pred8 </span><span class="s3">= </span><span class="s1">rf8</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">acc8 </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">pred8</span><span class="s3">)</span>
+
+<span class="s0">#balanced class weight</span>
+<span class="s1">rf9 </span><span class="s3">= </span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">class_weight</span><span class="s3">=</span><span class="s5">&quot;balanced&quot;</span><span class="s3">, </span><span class="s1">n_estimators</span><span class="s3">=</span><span class="s4">200</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">rf9</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">pred9 </span><span class="s3">= </span><span class="s1">rf9</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">acc9 </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">pred9</span><span class="s3">)</span>
+
+<span class="s0">#combining multiple</span>
+<span class="s1">rf10 </span><span class="s3">= </span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">min_samples_split</span><span class="s3">=</span><span class="s4">10</span><span class="s3">, </span><span class="s1">min_samples_leaf</span><span class="s3">=</span><span class="s4">7</span><span class="s3">, </span><span class="s1">n_estimators</span><span class="s3">=</span><span class="s4">200</span><span class="s3">, </span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">rf10</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">pred10 </span><span class="s3">= </span><span class="s1">rf10</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">acc10 </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">pred10</span><span class="s3">)</span>
+
+<span class="s1">rf11 </span><span class="s3">= </span><span class="s1">RandomForestClassifier</span><span class="s3">(</span><span class="s1">n_estimators</span><span class="s3">=</span><span class="s4">200</span><span class="s3">, </span><span class="s1">max_depth</span><span class="s3">=</span><span class="s4">15</span><span class="s3">,</span><span class="s1">min_samples_split</span><span class="s3">=</span><span class="s4">5</span><span class="s3">, </span><span class="s1">min_samples_leaf</span><span class="s3">=</span><span class="s4">2</span><span class="s3">,</span><span class="s1">random_state</span><span class="s3">=</span><span class="s4">3001</span><span class="s3">)</span>
+<span class="s1">rf11</span><span class="s3">.</span><span class="s1">fit</span><span class="s3">(</span><span class="s1">X_train</span><span class="s3">, </span><span class="s1">y_train</span><span class="s3">)</span>
+<span class="s1">pred11 </span><span class="s3">= </span><span class="s1">rf11</span><span class="s3">.</span><span class="s1">predict</span><span class="s3">(</span><span class="s1">X_test</span><span class="s3">)</span>
+<span class="s1">acc11 </span><span class="s3">= </span><span class="s1">accuracy_score</span><span class="s3">(</span><span class="s1">y_test</span><span class="s3">, </span><span class="s1">pred11</span><span class="s3">)</span>
+
+<span class="s1">acc_score_array</span><span class="s3">=[</span><span class="s1">acc1</span><span class="s3">,</span><span class="s1">acc2</span><span class="s3">,</span><span class="s1">acc3</span><span class="s3">,</span><span class="s1">acc4</span><span class="s3">,</span><span class="s1">acc5</span><span class="s3">,</span><span class="s1">acc6</span><span class="s3">,</span><span class="s1">acc7</span><span class="s3">,</span><span class="s1">acc8</span><span class="s3">, </span><span class="s1">acc9</span><span class="s3">, </span><span class="s1">acc10</span><span class="s3">,</span><span class="s1">acc11</span><span class="s3">]</span>
+<span class="s1">print</span><span class="s3">(</span><span class="s1">acc_score_array</span><span class="s3">)</span>
+
+<span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range</span><span class="s3">(</span><span class="s1">len</span><span class="s3">(</span><span class="s1">acc_score_array</span><span class="s3">)):</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s5">'rf'</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">i</span><span class="s3">+</span><span class="s4">1</span><span class="s3">)+</span><span class="s5">' accuracy: '</span><span class="s3">+</span><span class="s1">str</span><span class="s3">(</span><span class="s1">acc_score_array</span><span class="s3">[</span><span class="s1">i</span><span class="s3">]))</span>
+    
+<span class="s1">best_index </span><span class="s3">= </span><span class="s1">np</span><span class="s3">.</span><span class="s1">argmax</span><span class="s3">(</span><span class="s1">acc_score_array</span><span class="s3">) + </span><span class="s4">1</span>
+<span class="s1">best_acc </span><span class="s3">= </span><span class="s1">max</span><span class="s3">(</span><span class="s1">acc_score_array</span><span class="s3">)</span>
+
+<span class="s1">print</span><span class="s3">(</span><span class="s5">f&quot;Maximum accuracy: Model </span><span class="s2">{</span><span class="s1">best_index</span><span class="s2">} </span><span class="s5">with accuracy </span><span class="s2">{</span><span class="s1">best_acc</span><span class="s2">}</span><span class="s5">&quot;</span><span class="s3">)</span>
+
+<span class="s0">#%% md 
+</span><span class="s1"># **Part 4: Ensemble Model Interpretation and Reflection (15 Points)**  
+</span><span class="s0">#%% md 
+</span>
+<span class="s1">## **Question 1 (5 points):** 
+## Create a plot that summarizes the results of your experiments and how they compare to the results of your baseline Decision Tree and Random Forest model. 
+ 
+## You may visualize your results in any type of plot you see fit. Color code your visual in some way so that models that did better than the baseline Random Forest are distinguished from models that did worse. 
+</span><span class="s0">#%% 
+</span><span class="s2">import </span><span class="s1">matplotlib</span><span class="s3">.</span><span class="s1">pyplot </span><span class="s2">as </span><span class="s1">plt</span>
+<span class="s2">import </span><span class="s1">numpy </span><span class="s2">as </span><span class="s1">np</span>
+
+<span class="s1">model_labels </span><span class="s3">= [</span><span class="s5">f&quot;RF</span><span class="s2">{</span><span class="s1">i</span><span class="s3">+</span><span class="s4">1</span><span class="s2">}</span><span class="s5">&quot; </span><span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range</span><span class="s3">(</span><span class="s1">len</span><span class="s3">(</span><span class="s1">acc_score_array</span><span class="s3">))] </span><span class="s0">##labels for the tuned models</span>
+<span class="s1">accs </span><span class="s3">= </span><span class="s1">np</span><span class="s3">.</span><span class="s1">array</span><span class="s3">(</span><span class="s1">acc_score_array</span><span class="s3">) </span><span class="s0">#accuracy array</span>
+<span class="s1">colors </span><span class="s3">= [</span><span class="s5">'green' </span><span class="s2">if </span><span class="s1">acc </span><span class="s3">&gt; </span><span class="s1">baselineRF_acc </span><span class="s2">else </span><span class="s5">'red' </span><span class="s2">for </span><span class="s1">acc </span><span class="s2">in </span><span class="s1">accs</span><span class="s3">] </span><span class="s0">##color the models, red if accuracy is lower than baseline rf</span>
+
+<span class="s0">#make plot</span>
+<span class="s1">plt</span><span class="s3">.</span><span class="s1">figure</span><span class="s3">(</span><span class="s1">figsize</span><span class="s3">=(</span><span class="s4">12</span><span class="s3">, </span><span class="s4">6</span><span class="s3">))</span>
+<span class="s1">plt</span><span class="s3">.</span><span class="s1">bar</span><span class="s3">(</span><span class="s1">model_labels</span><span class="s3">, </span><span class="s1">accs</span><span class="s3">, </span><span class="s1">color</span><span class="s3">=</span><span class="s1">colors</span><span class="s3">)</span>
+<span class="s1">plt</span><span class="s3">.</span><span class="s1">ylabel</span><span class="s3">(</span><span class="s5">&quot;Accuracy&quot;</span><span class="s3">)</span>
+<span class="s1">plt</span><span class="s3">.</span><span class="s1">xlabel</span><span class="s3">(</span><span class="s5">&quot;Model Number&quot;</span><span class="s3">)</span>
+<span class="s1">plt</span><span class="s3">.</span><span class="s1">title</span><span class="s3">(</span><span class="s5">&quot;Random Forest Tuning Results&quot;</span><span class="s3">)</span>
+
+<span class="s2">for </span><span class="s1">i</span><span class="s3">, </span><span class="s1">acc </span><span class="s2">in </span><span class="s1">enumerate</span><span class="s3">(</span><span class="s1">accs</span><span class="s3">): </span><span class="s0">#add accuracy values</span>
+    <span class="s1">plt</span><span class="s3">.</span><span class="s1">text</span><span class="s3">(</span><span class="s1">i</span><span class="s3">, </span><span class="s1">acc </span><span class="s3">+ </span><span class="s4">0.002</span><span class="s3">, </span><span class="s5">f&quot;</span><span class="s2">{</span><span class="s1">acc</span><span class="s2">:</span><span class="s5">.3f</span><span class="s2">}</span><span class="s5">&quot;</span><span class="s3">, </span><span class="s1">ha</span><span class="s3">=</span><span class="s5">'center'</span><span class="s3">)</span>
+
+
+
+<span class="s1">plt</span><span class="s3">.</span><span class="s1">show</span><span class="s3">()</span>
+
+<span class="s0">#%% md 
+</span><span class="s1">## **Question 2 (5 points):** 
+## Write 10 or more sentences on what parameters had the biggest effect or did not seem to effect your results. Did any parameter choices make your results worse than your vanilla model? 
+</span><span class="s0">#%% md 
+</span><span class="s1">**The parameters I chose... 
+Increasing the number of estimators to 200 in my models resulted in a small increase in accuracy. However, increasing n_estimators beyond that did not lead to further improvement. Similarly, adjusting the maximum depth to 10 improved accuracy, but increasing it to 30 did not provide additional improvement. Changes to min_sample_leaf and min_sample_split had large effects on accuracy when tuned separately in models 5 and 6. However, combining these two parameters in mdoel 10 did not provide the highest accuracy. Model 5, which used min_samples_leaf=7 and n_estimators=200 achieved the highest result. Some parameter changes reduced performance compared to the baseline random forest. Model 7 set max_features=log2 and performed worse. Model 8 removed bootstrapping and also reduced accuracy. Finally, model 9, which used class_weight=balanced, decreased accuracy, suggesting that the dataset was not heavily imbalanced to begin with. Overall, the most impactful parameters were n_estimators and min_samples_leaf.  
+ 
+** 
+</span><span class="s0">#%% md 
+</span><span class="s1">## **Question 3 (5 points):** 
+## Write 10 or more sentences reflecting on the tuning process. 
+ 
+## What kind of approach did you take? Was it random combinations or more structured? Did you change your approach after seeing your initial results? 
+ 
+## What kind of strategies in preprocessing and picking parameters (ie: brute forcing parameters, testing various values in a range) do you think would get some of the best scores in the class? 
+</span><span class="s0">#%% md 
+</span><span class="s1">**My approach to tuning...** 
+ 
+My approach during tuning was random at first but also structured. I first tried changing each parameter and observed effects on accuracy. After finding that changing some parameters such as increasing n_estimators improved performance, I tried combining parameters that were performing well in models 10 and 11. After that, I systematically tried increasing or changing parameters one at a time to find the ideal combination. Randomly changing parameters did not have a large effect on accuracy. I also noticed that some parameters, such as balanced class, had very little effect on accuracy, so I did not combine that with other parameters. Gridsearch would be a good method to finding an ideal combination for parameters rather than manually tuning. I think the best class scores would come from using gridsearch combined with different preprocessing techniques. Further preprocessing could include reducing outliers and unnecessary features. Overall, the tuning process showed that it can be difficult to manually decide effective parameters to increase accuracy.  
+</span><span class="s0">#%% md 
+</span><span class="s1">### Honor Pledge 
+</span><span class="s0">#%% md 
+</span><span class="s1">On my honor as a student, I have neither given nor received unauthorized aid on this assignment.</span></pre>
+</body>
+</html>
